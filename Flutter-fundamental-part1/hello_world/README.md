@@ -49,8 +49,8 @@
    <p align="center"><img src="./images/12.png" alt="Screenshot 5" width="400"/></p>
    <p align="center"><img src="./images/13.png" alt="Screenshot 6" width="400"/></p>
 2. Setelah berhasil masuk ke menu Sistem, buka opsi Developer. Kemudian cari dan pilih USB debugging, lalu aktifkan mode debugging setelah perangkat tersambung melalui USB.
-   <p align="center"><img src="./images/14.png" alt="Screenshot 5" width="400"/></p>
-   <p align="center"><img src="./images/15.png" alt="Screenshot 6" width="400"/></p>
+   <p align="center"><img src="./images/14.png" alt="Screenshot 7" width="400"/></p>
+   <p align="center"><img src="./images/15.png" alt="Screenshot 8" width="400"/></p>
 
 ---
 

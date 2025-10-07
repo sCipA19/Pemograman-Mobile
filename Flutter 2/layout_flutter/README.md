@@ -105,4 +105,5 @@ Item pada ListView saat ini ketika ditekan masih belum memberikan aksi tertentu.
    <p align="center"><img src="./images/19.png"Screenshot 1" width="400"/></p>
 2. Pembacaan nilai yang dikirimkan pada halaman sebelumnya dapat dilakukan menggunakan ModalRoute. Tambahkan kode berikut pada blok fungsi build dalam halaman ItemPage. Setelah nilai didapatkan, anda dapat menggunakannya seperti penggunaan variabel pada umumnya. (https://docs.flutter.dev/cookbook/navigation/navigate-with-arguments)
    <p align="center"><img src="./images/20.png"Screenshot 1" width="400"/></p>
-3. Pada hasil akhir dari aplikasi belanja yang telah anda selesaikan, tambahkan atribut foto produk, stok, dan rating. Ubahlah tampilan menjadi GridView seperti di aplikasi marketplace pada umumnya.
+3. Hasil
+   <p align="center"><img src="./images/21.png"Screenshot 1" width="400"/></p>

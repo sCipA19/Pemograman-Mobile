@@ -2,10 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:path_provider/path_provider.dart';
 import 'result_screen.dart';
-
-late List<CameraDescription> cameras;
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -15,8 +12,9 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  CameraController? _controller; // gunakan nullable agar aman
+  CameraController? _controller;
   late Future<void> _initializeControllerFuture;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -24,23 +22,24 @@ class _ScanScreenState extends State<ScanScreen> {
     _initCamera();
   }
 
-  /// Inisialisasi kamera
-  void _initCamera() async {
+  Future<void> _initCamera() async {
     try {
-      cameras = await availableCameras();
-      _controller = CameraController(
-        cameras.first,
-        ResolutionPreset.medium,
-      );
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        throw Exception('Tidak ada kamera yang terdeteksi');
+      }
 
+      _controller = CameraController(cameras.first, ResolutionPreset.medium);
       _initializeControllerFuture = _controller!.initialize();
       await _initializeControllerFuture;
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     } catch (e) {
-      debugPrint('Error initializing camera: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal inisialisasi kamera: $e')),
+        );
+      }
     }
   }
 
@@ -50,36 +49,30 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  /// Proses OCR dari file gambar
-  Future<String> _ocrFromFile(File imageFile) async {
+  /// Fungsi OCR
+  Future<String> _performOcr(File imageFile) async {
     final inputImage = InputImage.fromFile(imageFile);
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     final RecognizedText recognizedText =
         await textRecognizer.processImage(inputImage);
-    textRecognizer.close();
+    await textRecognizer.close();
     return recognizedText.text;
   }
 
-  /// Ambil foto lalu pindah ke halaman hasil
+  /// Ambil foto dan proses OCR
   Future<void> _takePicture() async {
     if (_controller == null) return;
 
     try {
+      setState(() => _isProcessing = true);
       await _initializeControllerFuture;
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Memproses OCR, mohon tunggu...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-
       final XFile image = await _controller!.takePicture();
-      final ocrText = await _ocrFromFile(File(image.path));
+      final ocrText = await _performOcr(File(image.path));
 
       if (!mounted) return;
+      setState(() => _isProcessing = false);
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -87,19 +80,34 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pemindaian Gagal! Periksa Izin Kamera atau coba lagi.'),
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Jika controller belum siap, tampilkan loading
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+      return Scaffold(
+        backgroundColor: Colors.grey[900],
+        body: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.yellow),
+              SizedBox(height: 16),
+              Text(
+                'Memuat Kamera... Harap tunggu.',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -110,34 +118,22 @@ class _ScanScreenState extends State<ScanScreen> {
         centerTitle: true,
         backgroundColor: Colors.deepPurple,
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: CameraPreview(_controller!),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: _takePicture,
-              icon: const Icon(Icons.camera_alt, color: Colors.white),
-              label: const Text(
-                'Ambil Foto & Scan',
-                style: TextStyle(color: Colors.white),
+          CameraPreview(_controller!),
+          if (_isProcessing)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.yellow),
               ),
             ),
-          ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.deepPurple,
+        onPressed: _takePicture,
+        child: const Icon(Icons.camera_alt),
       ),
     );
   }

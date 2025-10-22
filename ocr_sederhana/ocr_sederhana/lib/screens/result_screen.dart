@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'home_screen.dart';
 
@@ -9,103 +8,106 @@ class ResultScreen extends StatefulWidget {
   const ResultScreen({super.key, required this.ocrText});
 
   @override
-  State<ResultScreen> createState() => _ResultScreenState();
+  _ResultScreenState createState() => _ResultScreenState();
 }
 
 class _ResultScreenState extends State<ResultScreen> {
-  late FlutterTts flutterTts;
+  late final FlutterTts _flutterTts;
+  bool _isSpeaking = false;
 
   @override
   void initState() {
     super.initState();
-    flutterTts = FlutterTts();
-    _initTts();
+    _flutterTts = FlutterTts();
+    _setupTts();
+
+    _flutterTts.setStartHandler(() {
+      setState(() => _isSpeaking = true);
+    });
+    _flutterTts.setCompletionHandler(() {
+      setState(() => _isSpeaking = false);
+    });
+    _flutterTts.setErrorHandler((err) {
+      setState(() => _isSpeaking = false);
+    });
   }
 
-  // Inisialisasi pengaturan TTS
-  Future<void> _initTts() async {
-    await flutterTts.setLanguage("id-ID"); // Bahasa Indonesia
-    await flutterTts.setSpeechRate(0.5);   // Kecepatan bicara
-    await flutterTts.setVolume(1.0);       // Volume maksimal
-    await flutterTts.setPitch(1.0);        // Nada normal
-  }
-
-  // Fungsi membacakan teks OCR
-  Future<void> _speakText() async {
-    if (widget.ocrText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak ada teks untuk dibacakan.')),
-      );
-      return;
+  Future<void> _setupTts() async {
+    try {
+      // Bahasa Indonesia
+      await _flutterTts.setLanguage("id-ID");
+      await _flutterTts.setSpeechRate(0.45);
+      await _flutterTts.setPitch(1.0);
+    } catch (_) {
+      // cukup diabaikan bila error
     }
-    await flutterTts.speak(widget.ocrText);
   }
 
   @override
   void dispose() {
-    flutterTts.stop(); // hentikan suara saat keluar halaman
+    _flutterTts.stop();
     super.dispose();
+  }
+
+  Future<void> _speak() async {
+    final text = widget.ocrText.trim();
+    if (text.isEmpty) return;
+
+    // Jika sedang berbicara, hentikan; tekan lagi untuk memulai ulang
+    if (_isSpeaking) {
+      await _flutterTts.stop();
+      return;
+    }
+
+    await _flutterTts.speak(text);
+  }
+
+  void _goHomeAndClearStack() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      (Route<dynamic> route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final displayText =
+        widget.ocrText.isEmpty ? 'Tidak ada teks ditemukan.' : widget.ocrText;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hasil OCR'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.copy),
-            tooltip: 'Salin teks',
-            onPressed: () {
-              if (widget.ocrText.isNotEmpty) {
-                Clipboard.setData(ClipboardData(text: widget.ocrText));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Teks berhasil disalin ke clipboard!'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
+        backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: SelectableText(
-            widget.ocrText.isEmpty
-                ? 'Tidak ada teks ditemukan.'
-                : widget.ocrText,
-            style: const TextStyle(fontSize: 18, height: 1.5),
+            displayText,
+            style: const TextStyle(fontSize: 18),
           ),
         ),
       ),
-
-      // Dua FloatingActionButton: Home dan TTS
       floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Tombol Home
           FloatingActionButton(
-            heroTag: "tts",
-            backgroundColor: Colors.blueAccent,
-            tooltip: 'Bacakan teks',
-            onPressed: _speakText,
-            child: const Icon(Icons.volume_up),
-          ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: "home",
-            tooltip: 'Kembali ke Menu Utama',
-            onPressed: () {
-              flutterTts.stop(); 
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-                (route) => false,
-              );
-            },
+            heroTag: 'home_fab',
+            onPressed: _goHomeAndClearStack,
+            tooltip: 'Kembali ke Home',
+            backgroundColor: Colors.deepPurple,
             child: const Icon(Icons.home),
+          ),
+          const SizedBox(height: 12),
+          // Tombol TTS
+          FloatingActionButton(
+            heroTag: 'tts_fab',
+            onPressed: _speak,
+            tooltip: _isSpeaking ? 'Berhenti membacakan' : 'Bacakan Teks',
+            backgroundColor: Colors.deepPurple,
+            child: Icon(_isSpeaking ? Icons.stop : Icons.volume_up),
           ),
         ],
       ),

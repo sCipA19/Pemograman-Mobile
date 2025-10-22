@@ -1,8 +1,6 @@
 <div align="center">
 
-# LAPORAN PRAKTIKUM PEMOGRAMAN MOBILE
-### JOBSHEET 6
-### Layout dan Navigasi
+# UTS
 
 <p align="center">
   <img src="./images/logo_polinema.png" alt="Logo Polinema" width="150"/>
